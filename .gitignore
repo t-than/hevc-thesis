@@ -1,3 +1,5 @@
+build/
+lib/
 bin/
 cfg/
 compat/
@@ -6,4 +8,5 @@ HM.xcodeproj/
 COPYING
 README
 .settings/
-
+rec.yuv
+str.bin
