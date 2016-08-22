@@ -1,7 +1,5 @@
-build/
 lib/
 bin/
-cfg/
 compat/
 doc/
 HM.xcodeproj/
