@@ -3868,7 +3868,9 @@ Void TEncSearch::xPatternSearchFast( const TComDataCU* const  pcCU,
     case MESEARCH_DIAMOND:
       xTZSearch( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred, false );
       break;
-
+    case MESEARCH_HEXAGON_EARLY:
+      xTZSearchSelective( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred );
+      break;
     case MESEARCH_SELECTIVE:
       xTZSearchSelective( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred );
       break;
