@@ -10,3 +10,5 @@ README
 .settings/
 rec.yuv
 str.bin
+*.a
+*.o
