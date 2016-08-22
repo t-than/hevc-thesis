@@ -445,7 +445,8 @@ enum MESearchMethod
   MESEARCH_DIAMOND           = 1,
   MESEARCH_SELECTIVE         = 2,
   MESEARCH_DIAMOND_ENHANCED  = 3,
-  MESEARCH_NUMBER_OF_METHODS = 4
+  MESEARCH_HEXAGON_EARLY = 4,
+  MESEARCH_NUMBER_OF_METHODS = 5
 };
 
 /// coefficient scanning type used in ACS
