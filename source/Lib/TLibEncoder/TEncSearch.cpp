@@ -41,6 +41,7 @@
 #include "TEncSearch.h"
 #include "TLibCommon/TComTU.h"
 #include "TLibCommon/Debug.h"
+#include <iostream>
 #include <math.h>
 #include <limits>
 
