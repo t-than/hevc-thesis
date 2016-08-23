@@ -392,6 +392,17 @@ protected:
                                     const TComMv* const      pIntegerMv2Nx2NPred
                                     );
 
+  Void xTZSearchHexagonEarly ( const TComDataCU* const  pcCU,
+                                    const TComPattern* const pcPatternKey,
+                                    const Pel* const         piRefY,
+                                    const Int                iRefStride,
+                                    const TComMv* const      pcMvSrchRngLT,
+                                    const TComMv* const      pcMvSrchRngRB,
+                                    TComMv&                  rcMv,
+                                    Distortion&              ruiSAD,
+                                    const TComMv* const      pIntegerMv2Nx2NPred
+                                    );
+
   Void xSetSearchRange            ( const TComDataCU* const pcCU,
                                     const TComMv&      cMvPred,
                                     const Int          iSrchRng,
