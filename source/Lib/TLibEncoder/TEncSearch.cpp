@@ -39,6 +39,7 @@
 #include "TLibCommon/TComRom.h"
 #include "TLibCommon/TComMotionInfo.h"
 #include "TEncSearch.h"
+#include "SearchPattern.h"
 #include "TLibCommon/TComTU.h"
 #include "TLibCommon/Debug.h"
 #include <iostream>
