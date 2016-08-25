@@ -83,15 +83,15 @@ void SearchPattern::resize( unsigned int size )
  * Inherits from abstract class SearchPattern
  * Implements the center and rood search pattern:
  *                          (1)
- *                     (2) (3) (4)
- *                          (5)
+ *                     (2) (*) (3)
+ *                          (4)
  */
 
 // RoodPattern constructors/destructors
 
 RoodPattern::RoodPattern( int x, int y )
 {
-  setNumOfPoints( 5 );
+  setNumOfPoints( 4 );
   setCenter( x, y );
 }
 
@@ -109,13 +109,12 @@ void RoodPattern::setCenter( int x, int y )
 
 void RoodPattern::producePoints()
 {
-  resize( 5 );
+  resize( 4 );
 
   setSearchPoint( 0, 0, 1 );
   setSearchPoint( 1, -1, 0 );
-  setSearchPoint( 2, 0, 0 );
-  setSearchPoint( 3, 1, 0 );
-  setSearchPoint( 4, 0, -1 );
+  setSearchPoint( 2, 1, 0 );
+  setSearchPoint( 3, 0, -1 );
 }
 
 /* Class RasterPattern
