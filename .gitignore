@@ -10,3 +10,4 @@ rec.yuv
 str.bin
 *.a
 *.o
+output/
