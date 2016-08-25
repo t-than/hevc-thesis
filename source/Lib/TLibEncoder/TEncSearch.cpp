@@ -3871,7 +3871,7 @@ Void TEncSearch::xPatternSearchFast( const TComDataCU* const  pcCU,
       xTZSearch( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred, false );
       break;
     case MESEARCH_HEXAGON_EARLY:
-      xTZSearchHexagonEarly( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred );
+      xTZSearchHexagonEarly( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred, false );
       break;
     case MESEARCH_SELECTIVE:
       xTZSearchSelective( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred );
@@ -4377,35 +4377,33 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
                                      const TComMv* const       pcMvSrchRngRB,
                                      TComMv                   &rcMv,
                                      Distortion               &ruiSAD,
-                                     const TComMv* const       pIntegerMv2Nx2NPred )
+                                     const TComMv* const       pIntegerMv2Nx2NPred,
+                                     const Bool               bExtendedSettings )
 {
-  const Bool bTestOtherPredictedMV    = true;
-  const Bool bTestZeroVector          = true;
-  const Bool bEnableRasterSearch      = true;
-  const Bool bAlwaysRasterSearch      = false;  // 1: BETTER but factor 15x slower
-  const Bool bStarRefinementEnable    = true;   // enable either star refinement or raster refinement
-  const Bool bStarRefinementDiamond   = true;   // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
-  const Bool bStarRefinementStop      = false;
-  const UInt uiStarRefinementRounds   = 2;  // star refinement stop X rounds after best match (must be >=1)
-  const UInt uiSearchRange            = m_iSearchRange;
-  const Int  uiSearchRangeInitial     = m_iSearchRange >> 2;
-  const Int  uiSearchStep             = 4;
-  const Int  iMVDistThresh            = 8;
+  const Bool bUseAdaptiveRaster                      = bExtendedSettings;
+  const Int  iRaster                                 = 5;
+  const Bool bTestOtherPredictedMV                   = bExtendedSettings;
+  const Bool bTestZeroVectorStart                    = bExtendedSettings;
+  const Bool bTestZeroVectorStop                     = false;
+  const Bool bFirstSearchDiamond                     = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
+  const Bool bFirstCornersForDiamondDist1            = bExtendedSettings;
+  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
+  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
+  const Bool bEnableRasterSearch                     = true;
+  const Bool bAlwaysRasterSearch                     = bExtendedSettings;  // true: BETTER but factor 2 slower
+  const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
+  const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
+  const Bool bRasterRefinementCornersForDiamondDist1 = bExtendedSettings;
+  const Bool bStarRefinementEnable                   = true;  // enable either star refinement or raster refinement
+  const Bool bStarRefinementDiamond                  = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
+  const Bool bStarRefinementCornersForDiamondDist1   = bExtendedSettings;
+  const Bool bStarRefinementStop                     = false;
+  const UInt uiStarRefinementRounds                  = 2;  // star refinement stop X rounds after best match (must be >=1)
+  const Bool bNewZeroNeighbourhoodTest               = bExtendedSettings;
 
-  Int   iSrchRngHorLeft         = pcMvSrchRngLT->getHor();
-  Int   iSrchRngHorRight        = pcMvSrchRngRB->getHor();
-  Int   iSrchRngVerTop          = pcMvSrchRngLT->getVer();
-  Int   iSrchRngVerBottom       = pcMvSrchRngRB->getVer();
-  Int   iFirstSrchRngHorLeft    = 0;
-  Int   iFirstSrchRngHorRight   = 0;
-  Int   iFirstSrchRngVerTop     = 0;
-  Int   iFirstSrchRngVerBottom  = 0;
-  Int   iStartX                 = 0;
-  Int   iStartY                 = 0;
-  Int   iBestX                  = 0;
-  Int   iBestY                  = 0;
-  Int   iDist                   = 0;
+  // Initialization of motion vectors, search helper struct
 
+  UInt uiSearchRange = m_iSearchRange;
   pcCU->clipMv( rcMv );
 #if ME_ENABLE_ROUNDING_OF_MVS
   rcMv.divideByPowerOf2(2);
@@ -4420,6 +4418,13 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   cStruct.iBestX = 0;
   cStruct.iBestY = 0;
 
+  /**
+   * First stage:
+   * We check the median predictor and the AMVP list. Then, we check the rood pattern, which includes
+   * the zero motion vector. If at the end of these checks the zero motion vector turns out to be
+   * the minimum distortion point, we complete the search and return the zero motion vector as the
+   * optimal point.
+   */
 
   // set rcMv (Median predictor) as start point and as best point
   xTZSearchHelp( pcPatternKey, cStruct, rcMv.getHor(), rcMv.getVer(), 0, 0 );
@@ -4440,13 +4445,33 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
     }
   }
 
-  // test whether zero Mv is better start point than Median predictor
-  if ( bTestZeroVector )
-  {
-    xTZSearchHelp( pcPatternKey, cStruct, 0, 0, 0, 0 );
+  // Rood search
+  SearchPattern* pattern = new RoodPattern( 0, 0 );
+  pattern->producePoints();
+
+  int i;
+  for ( i = 0; i < pattern->getNumOfPoints(); i++ ) {
+    xTZSearchHelp( pcPatternKey, cStruct, pattern->getCurrentX(), pattern->getCurrentY(), 0, 0 );
+    pattern->next();
   }
 
-  if ( pIntegerMv2Nx2NPred != 0 )
+  // If not tested, test zero vector
+  if ( (rcMv.getHor() != 0 || rcMv.getVer() != 0) && (0 != cStruct.iBestX || 0 != cStruct.iBestY) )
+    xTZSearchHelp( pcPatternKey, cStruct, 0, 0, 0, 0 );
+
+  // Early terminate if zero vector is the best candidate
+  if ( cStruct.iBestX == 0 && cStruct.iBestY == 0 ) {
+    rcMv.set( 0, 0 );
+    ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
+    return;
+  }
+
+  Int   iSrchRngHorLeft   = pcMvSrchRngLT->getHor();
+  Int   iSrchRngHorRight  = pcMvSrchRngRB->getHor();
+  Int   iSrchRngVerTop    = pcMvSrchRngLT->getVer();
+  Int   iSrchRngVerBottom = pcMvSrchRngRB->getVer();
+
+  if (pIntegerMv2Nx2NPred != 0)
   {
     TComMv integerMv2Nx2NPred = *pIntegerMv2Nx2NPred;
     integerMv2Nx2NPred <<= 2;
@@ -4456,7 +4481,12 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 #else
     integerMv2Nx2NPred >>= 2;
 #endif
-    xTZSearchHelp(pcPatternKey, cStruct, integerMv2Nx2NPred.getHor(), integerMv2Nx2NPred.getVer(), 0, 0);
+    if ((rcMv != integerMv2Nx2NPred) &&
+        (integerMv2Nx2NPred.getHor() != cStruct.iBestX || integerMv2Nx2NPred.getVer() != cStruct.iBestY))
+    {
+      // only test integerMv2Nx2NPred if not obviously previously tested.
+      xTZSearchHelp(pcPatternKey, cStruct, integerMv2Nx2NPred.getHor(), integerMv2Nx2NPred.getVer(), 0, 0);
+    }
 
     // reset search range
     TComMv cMvSrchRngLT;
@@ -4471,41 +4501,155 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
     iSrchRngVerBottom = cMvSrchRngRB.getVer();
   }
 
-  // Initial search
-  iBestX = cStruct.iBestX;
-  iBestY = cStruct.iBestY;
-  iFirstSrchRngHorLeft    = ((iBestX - uiSearchRangeInitial) > iSrchRngHorLeft)   ? (iBestX - uiSearchRangeInitial) : iSrchRngHorLeft;
-  iFirstSrchRngVerTop     = ((iBestY - uiSearchRangeInitial) > iSrchRngVerTop)    ? (iBestY - uiSearchRangeInitial) : iSrchRngVerTop;
-  iFirstSrchRngHorRight   = ((iBestX + uiSearchRangeInitial) < iSrchRngHorRight)  ? (iBestX + uiSearchRangeInitial) : iSrchRngHorRight;
-  iFirstSrchRngVerBottom  = ((iBestY + uiSearchRangeInitial) < iSrchRngVerBottom) ? (iBestY + uiSearchRangeInitial) : iSrchRngVerBottom;
+  // start search
+  Int  iDist = 0;
+  Int  iStartX = cStruct.iBestX;
+  Int  iStartY = cStruct.iBestY;
 
-  for ( iStartY = iFirstSrchRngVerTop; iStartY <= iFirstSrchRngVerBottom; iStartY += uiSearchStep )
+  const Bool bBestCandidateZero = (cStruct.iBestX == 0) && (cStruct.iBestY == 0);
+
+  // first search around best position up to now.
+  // The following works as a "subsampled/log" window search around the best candidate
+  for ( iDist = 1; iDist <= (Int)uiSearchRange; iDist*=2 )
   {
-    for ( iStartX = iFirstSrchRngHorLeft; iStartX <= iFirstSrchRngHorRight; iStartX += uiSearchStep )
+    if ( bFirstSearchDiamond == 1 )
     {
-      xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, 0 );
-      xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, 1, false );
-      xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, 2, false );
+      xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bFirstCornersForDiamondDist1 );
+    }
+    else
+    {
+      xTZ8PointSquareSearch  ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist );
+    }
+
+    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
+    {
+      break;
     }
   }
 
-  Int iMaxMVDistToPred = (abs(cStruct.iBestX - iBestX) > iMVDistThresh || abs(cStruct.iBestY - iBestY) > iMVDistThresh);
-
-  //full search with early exit if MV is distant from predictors
-  if ( bEnableRasterSearch && (iMaxMVDistToPred || bAlwaysRasterSearch) )
+  if (!bNewZeroNeighbourhoodTest)
   {
-    for ( iStartY = iSrchRngVerTop; iStartY <= iSrchRngVerBottom; iStartY += 1 )
+    // test whether zero Mv is a better start point than Median predictor
+    if ( bTestZeroVectorStart && ((cStruct.iBestX != 0) || (cStruct.iBestY != 0)) )
     {
-      for ( iStartX = iSrchRngHorLeft; iStartX <= iSrchRngHorRight; iStartX += 1 )
+      xTZSearchHelp( pcPatternKey, cStruct, 0, 0, 0, 0 );
+      if ( (cStruct.iBestX == 0) && (cStruct.iBestY == 0) )
       {
-        xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, 1 );
+        // test its neighborhood
+        for ( iDist = 1; iDist <= (Int)uiSearchRange; iDist*=2 )
+        {
+          xTZ8PointDiamondSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, 0, 0, iDist, false );
+          if ( bTestZeroVectorStop && (cStruct.uiBestRound > 0) ) // stop criterion
+          {
+            break;
+          }
+        }
       }
     }
   }
-  //Smaller MV, refine around predictor
-  else if ( bStarRefinementEnable && cStruct.uiBestDistance > 0 )
+  else
   {
-    // start refinement
+    // Test also zero neighbourhood but with half the range
+    // It was reported that the original (above) search scheme using bTestZeroVectorStart did not
+    // make sense since one would have already checked the zero candidate earlier
+    // and thus the conditions for that test would have not been satisfied
+    if (bTestZeroVectorStart == true && bBestCandidateZero != true)
+    {
+      for ( iDist = 1; iDist <= ((Int)uiSearchRange >> 1); iDist*=2 )
+      {
+        xTZ8PointDiamondSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, 0, 0, iDist, false );
+        if ( bTestZeroVectorStop && (cStruct.uiBestRound > 2) ) // stop criterion
+        {
+          break;
+        }
+      }
+    }
+  }
+
+  // calculate only 2 missing points instead 8 points if cStruct.uiBestDistance == 1
+  if ( cStruct.uiBestDistance == 1 )
+  {
+    cStruct.uiBestDistance = 0;
+    xTZ2PointSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB );
+  }
+
+  // raster search if distance is too big
+  if (bUseAdaptiveRaster)
+  {
+    int iWindowSize = iRaster;
+    Int   iSrchRngRasterLeft   = iSrchRngHorLeft;
+    Int   iSrchRngRasterRight  = iSrchRngHorRight;
+    Int   iSrchRngRasterTop    = iSrchRngVerTop;
+    Int   iSrchRngRasterBottom = iSrchRngVerBottom;
+
+    if (!(bEnableRasterSearch && ( ((Int)(cStruct.uiBestDistance) > iRaster))))
+    {
+      iWindowSize ++;
+      iSrchRngRasterLeft /= 2;
+      iSrchRngRasterRight /= 2;
+      iSrchRngRasterTop /= 2;
+      iSrchRngRasterBottom /= 2;
+    }
+    cStruct.uiBestDistance = iWindowSize;
+    for ( iStartY = iSrchRngRasterTop; iStartY <= iSrchRngRasterBottom; iStartY += iWindowSize )
+    {
+      for ( iStartX = iSrchRngRasterLeft; iStartX <= iSrchRngRasterRight; iStartX += iWindowSize )
+      {
+        xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, iWindowSize );
+      }
+    }
+  }
+  else
+  {
+    if ( bEnableRasterSearch && ( ((Int)(cStruct.uiBestDistance) > iRaster) || bAlwaysRasterSearch ) )
+    {
+      cStruct.uiBestDistance = iRaster;
+      for ( iStartY = iSrchRngVerTop; iStartY <= iSrchRngVerBottom; iStartY += iRaster )
+      {
+        for ( iStartX = iSrchRngHorLeft; iStartX <= iSrchRngHorRight; iStartX += iRaster )
+        {
+          xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, iRaster );
+        }
+      }
+    }
+  }
+
+  // raster refinement
+
+  if ( bRasterRefinementEnable && cStruct.uiBestDistance > 0 )
+  {
+    while ( cStruct.uiBestDistance > 0 )
+    {
+      iStartX = cStruct.iBestX;
+      iStartY = cStruct.iBestY;
+      if ( cStruct.uiBestDistance > 1 )
+      {
+        iDist = cStruct.uiBestDistance >>= 1;
+        if ( bRasterRefinementDiamond == 1 )
+        {
+          xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bRasterRefinementCornersForDiamondDist1 );
+        }
+        else
+        {
+          xTZ8PointSquareSearch  ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist );
+        }
+      }
+
+      // calculate only 2 missing points instead 8 points if cStruct.uiBestDistance == 1
+      if ( cStruct.uiBestDistance == 1 )
+      {
+        cStruct.uiBestDistance = 0;
+        if ( cStruct.ucPointNr != 0 )
+        {
+          xTZ2PointSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB );
+        }
+      }
+    }
+  }
+
+  // star refinement
+  if ( bStarRefinementEnable && cStruct.uiBestDistance > 0 )
+  {
     while ( cStruct.uiBestDistance > 0 )
     {
       iStartX = cStruct.iBestX;
@@ -4516,7 +4660,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
       {
         if ( bStarRefinementDiamond == 1 )
         {
-          xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, false );
+          xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bStarRefinementCornersForDiamondDist1 );
         }
         else
         {
@@ -4544,6 +4688,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   rcMv.set( cStruct.iBestX, cStruct.iBestY );
   ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
 
+  delete pattern;
 }
 
 Void TEncSearch::xPatternSearchFracDIF(

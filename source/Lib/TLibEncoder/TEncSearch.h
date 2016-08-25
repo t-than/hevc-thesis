@@ -400,7 +400,8 @@ protected:
                                     const TComMv* const      pcMvSrchRngRB,
                                     TComMv&                  rcMv,
                                     Distortion&              ruiSAD,
-                                    const TComMv* const      pIntegerMv2Nx2NPred
+                                    const TComMv* const      pIntegerMv2Nx2NPred,
+                                    const Bool               bExtendedSettings
                                     );
 
   Void xSetSearchRange            ( const TComDataCU* const pcCU,
