@@ -24,6 +24,7 @@ public:
   void setSearchPoint( unsigned int pos, int x, int y );
   void resize( unsigned int size );
   void next(); // Without bound-checking
+  virtual void producePoints() = 0;
 
 private:
   std::vector<int> searchPointsX;
@@ -32,7 +33,6 @@ private:
   unsigned int numOfPoints;
   int currentX;
   int currentY;
-  virtual void producePoints() = 0;
 };
 
 class RoodPattern : public SearchPattern
