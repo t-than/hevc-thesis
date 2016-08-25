@@ -4380,7 +4380,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
                                      const TComMv* const       pIntegerMv2Nx2NPred,
                                      const Bool               bExtendedSettings )
 {
-  const Bool bUseAdaptiveRaster                      = bExtendedSettings;
   const Int  iRaster                                 = 5;
   const Bool bTestOtherPredictedMV                   = bExtendedSettings;
   const Bool bTestZeroVectorStart                    = bExtendedSettings;
@@ -4389,8 +4388,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bFirstCornersForDiamondDist1            = bExtendedSettings;
   const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
   const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
-  const Bool bEnableRasterSearch                     = true;
-  const Bool bAlwaysRasterSearch                     = bExtendedSettings;  // true: BETTER but factor 2 slower
   const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
   const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
   const Bool bRasterRefinementCornersForDiamondDist1 = bExtendedSettings;
@@ -4527,6 +4524,11 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
     }
   }
 
+/*  pattern = new HexagonPattern
+  for ( i = 0; i < uiSearchRange; i++ ) {
+
+  }
+  */
   if (!bNewZeroNeighbourhoodTest)
   {
     // test whether zero Mv is a better start point than Median predictor
@@ -4574,45 +4576,19 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   }
 
   // raster search if distance is too big
-  if (bUseAdaptiveRaster)
-  {
-    int iWindowSize = iRaster;
-    Int   iSrchRngRasterLeft   = iSrchRngHorLeft;
-    Int   iSrchRngRasterRight  = iSrchRngHorRight;
-    Int   iSrchRngRasterTop    = iSrchRngVerTop;
-    Int   iSrchRngRasterBottom = iSrchRngVerBottom;
 
-    if (!(bEnableRasterSearch && ( ((Int)(cStruct.uiBestDistance) > iRaster))))
-    {
-      iWindowSize ++;
-      iSrchRngRasterLeft /= 2;
-      iSrchRngRasterRight /= 2;
-      iSrchRngRasterTop /= 2;
-      iSrchRngRasterBottom /= 2;
-    }
-    cStruct.uiBestDistance = iWindowSize;
-    for ( iStartY = iSrchRngRasterTop; iStartY <= iSrchRngRasterBottom; iStartY += iWindowSize )
-    {
-      for ( iStartX = iSrchRngRasterLeft; iStartX <= iSrchRngRasterRight; iStartX += iWindowSize )
-      {
-        xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, iWindowSize );
-      }
-    }
-  }
-  else
+  if ( (Int)(cStruct.uiBestDistance) > iRaster )
   {
-    if ( bEnableRasterSearch && ( ((Int)(cStruct.uiBestDistance) > iRaster) || bAlwaysRasterSearch ) )
+    cStruct.uiBestDistance = iRaster;
+    for ( iStartY = iSrchRngVerTop; iStartY <= iSrchRngVerBottom; iStartY += iRaster )
     {
-      cStruct.uiBestDistance = iRaster;
-      for ( iStartY = iSrchRngVerTop; iStartY <= iSrchRngVerBottom; iStartY += iRaster )
+      for ( iStartX = iSrchRngHorLeft; iStartX <= iSrchRngHorRight; iStartX += iRaster )
       {
-        for ( iStartX = iSrchRngHorLeft; iStartX <= iSrchRngHorRight; iStartX += iRaster )
-        {
-          xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, iRaster );
-        }
+        xTZSearchHelp( pcPatternKey, cStruct, iStartX, iStartY, 0, iRaster );
       }
     }
   }
+
 
   // raster refinement
 
