@@ -21,8 +21,16 @@ public:
   void setNumOfPoints( unsigned int num );
   unsigned int getCurrIdx() const;
   void setCurrIdx( unsigned int idx );
+  void incNumOfPoints();
   void setSearchPoint( unsigned int pos, int x, int y );
+  void pushSearchPoint( int x, int y );
+  void setWindow( int t, int r, int b, int l );
+  int getBottom() const;
+  int getLeft() const;
+  int getRight() const;
+  int getTop() const;
   void resize( unsigned int size );
+  void clear();
   void next(); // Without bound-checking
   virtual void producePoints() = 0;
 
@@ -33,6 +41,7 @@ private:
   unsigned int numOfPoints;
   int currentX;
   int currentY;
+  int top, right, bottom, left;
 };
 
 class RoodPattern : public SearchPattern
@@ -42,6 +51,8 @@ public:
   ~RoodPattern();
   void setCenter( int x, int y );
   void producePoints();
+  int getCenterX() const;
+  int getCenterY() const;
 
 private:
   int centerX, centerY;
@@ -53,17 +64,10 @@ public:
   RasterPattern( unsigned int str, int t, int r, int b, int l );
   ~RasterPattern();
   void producePoints();
-  void setWindow( int t, int r, int b, int l );
   unsigned int getStride() const;
   void setStride( unsigned int str );
-  int getBottom() const;
-  int getLeft() const;
-  int getRight() const;
-  int getTop() const;
-
 private:
   unsigned int stride;
-  int top, right, bottom, left;
 };
 
 class HexagonPattern : public SearchPattern

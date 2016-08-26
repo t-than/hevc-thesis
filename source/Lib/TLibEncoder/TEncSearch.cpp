@@ -4417,7 +4417,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   /**
    * First stage:
-   * We check the median predictor and the AMVP list. Then, we check the rood pattern, which includes
+   * We check the median predictor and the AMVP list. Then, we check the rood pattern and then
    * the zero motion vector. If at the end of these checks the zero motion vector turns out to be
    * the minimum distortion point, we complete the search and return the zero motion vector as the
    * optimal point.
@@ -4441,12 +4441,18 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
       xTZSearchHelp( pcPatternKey, cStruct, cMv.getHor(), cMv.getVer(), 0, 0 );
     }
   }
+  //Search window set
+  Int   iSrchRngHorLeft   = pcMvSrchRngLT->getHor();
+  Int   iSrchRngHorRight  = pcMvSrchRngRB->getHor();
+  Int   iSrchRngVerTop    = pcMvSrchRngLT->getVer();
+  Int   iSrchRngVerBottom = pcMvSrchRngRB->getVer();
 
   // Rood search
   SearchPattern* pattern = new RoodPattern( 0, 0 );
+  pattern->setWindow( iSrchRngVerTop, iSrchRngHorRight, iSrchRngVerBottom, iSrchRngHorLeft );
   pattern->producePoints();
 
-  int i;
+  int i; // Dummy index for loops
   for ( i = 0; i < pattern->getNumOfPoints(); i++ ) {
     xTZSearchHelp( pcPatternKey, cStruct, pattern->getCurrentX(), pattern->getCurrentY(), 0, 0 );
     pattern->next();
@@ -4463,10 +4469,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
     return;
   }
 
-  Int   iSrchRngHorLeft   = pcMvSrchRngLT->getHor();
-  Int   iSrchRngHorRight  = pcMvSrchRngRB->getHor();
-  Int   iSrchRngVerTop    = pcMvSrchRngLT->getVer();
-  Int   iSrchRngVerBottom = pcMvSrchRngRB->getVer();
 
   if (pIntegerMv2Nx2NPred != 0)
   {

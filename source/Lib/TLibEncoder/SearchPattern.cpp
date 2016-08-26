@@ -22,6 +22,7 @@ SearchPattern::SearchPattern()
   currentY = 0;
   currIdx = 0;
   numOfPoints = 0;
+  setWindow( 0, 0, 0, 0 );
 }
 
 SearchPattern::~SearchPattern()     // std::vector-s get deleted when they get out of scope
@@ -66,12 +67,52 @@ void SearchPattern::setCurrIdx( unsigned int idx )
   this->currIdx = idx;
 }
 
+void SearchPattern::setWindow( int t, int r, int b, int l )
+{
+  this->top = t;
+  this->right = r;
+  this->bottom = b;
+  this->left = l;
+}
+
+int SearchPattern::getBottom() const
+{
+  return bottom;
+}
+
+int SearchPattern::getLeft() const
+{
+  return left;
+}
+
+int SearchPattern::getRight() const
+{
+  return right;
+}
+
+int SearchPattern::getTop() const
+{
+  return top;
+}
+
+// SearchPattern Methods
+
 void SearchPattern::next()
 {
   currIdx++;
 }
 
-// SearchPattern Methods
+void SearchPattern::incNumOfPoints()
+{
+  numOfPoints++;
+}
+
+void SearchPattern::pushSearchPoint( int x, int y )
+{
+  incNumOfPoints();
+  searchPointsX.push_back( x );
+  searchPointsY.push_back( y );
+}
 
 void SearchPattern::resize( unsigned int size )
 {
@@ -79,6 +120,11 @@ void SearchPattern::resize( unsigned int size )
   searchPointsY.resize( size );
 }
 
+void SearchPattern::clear()
+{
+  searchPointsX.clear();
+  searchPointsY.clear();
+}
 /* Class RoodPattern
  * Inherits from abstract class SearchPattern
  * Implements the center and rood search pattern:
@@ -92,7 +138,7 @@ void SearchPattern::resize( unsigned int size )
 RoodPattern::RoodPattern( int x, int y )
 {
   setCurrIdx( 0 );
-  setNumOfPoints( 4 );
+  setNumOfPoints( 0 );
   setCenter( x, y );
 }
 
@@ -108,19 +154,34 @@ void RoodPattern::setCenter( int x, int y )
   this->centerY = y;
 }
 
+int RoodPattern::getCenterX() const
+{
+  return centerX;
+}
+
+int RoodPattern::getCenterY() const
+{
+  return centerY;
+}
+
+// RoodPattern methods
 void RoodPattern::producePoints()
 {
-  resize( 4 );
+  clear();
 
-  setSearchPoint( 0, 0, 1 );
-  setSearchPoint( 1, -1, 0 );
-  setSearchPoint( 2, 1, 0 );
-  setSearchPoint( 3, 0, -1 );
+  if ( (getCenterY() - 1) >= getTop() )
+    pushSearchPoint( 0, -1 );
+  if ( (getCenterX() - 1) >= getLeft() )
+    pushSearchPoint( -1, 0 );
+  if ( (getCenterX() + 1) <= getRight() )
+    pushSearchPoint( 1, 0 );
+  if ( (getCenterY() + 1) <= getBottom() )
+    pushSearchPoint( 0, 1 );
 }
 
 /* Class RasterPattern
  * Inherits from abstract class SearchPattern
- * Implements the raster search on a TODO:numOfPoints
+ * Implements the raster search on the set window
  * "stride" points apart.
  */
 
@@ -139,14 +200,6 @@ RasterPattern::~RasterPattern()
 
 // RasterPattern getters and setters
 
-void RasterPattern::setWindow( int t, int r, int b, int l )
-{
-  this->top = t;
-  this->right = r;
-  this->bottom = b;
-  this->left = l;
-}
-
 unsigned int RasterPattern::getStride() const
 {
   return stride;
@@ -155,25 +208,6 @@ unsigned int RasterPattern::getStride() const
 void RasterPattern::setStride( unsigned int str )
 {
   this->stride = str;
-}
-int RasterPattern::getBottom() const
-{
-  return bottom;
-}
-
-int RasterPattern::getLeft() const
-{
-  return left;
-}
-
-int RasterPattern::getRight() const
-{
-  return right;
-}
-
-int RasterPattern::getTop() const
-{
-  return top;
 }
 
 // RasterPattern methods
@@ -218,18 +252,6 @@ HexagonPattern::HexagonPattern( unsigned int str, int x, int y )
   setCurrIdx( 0 );
   setCenter( x, y );
   setStride( str );
-  if ( str == 0 ) {
-    setNumOfPoints( 1 );
-    resize( 1 );
-  }
-  else if ( str == 1 ) {
-    setNumOfPoints( 4 );
-    resize( 4 );
-  }
-  else {
-    setNumOfPoints( 6 );
-    resize( 6 );
-  }
 }
 
 HexagonPattern::HexagonPattern( int x, int y )
@@ -237,7 +259,7 @@ HexagonPattern::HexagonPattern( int x, int y )
   setCurrIdx( 0 );
   setCenter( x, y );
   resize( 1 );
-  setNumOfPoints( 1 );
+  setNumOfPoints( 0 );
 }
 
 HexagonPattern::~HexagonPattern()
