@@ -91,6 +91,7 @@ void SearchPattern::resize( unsigned int size )
 
 RoodPattern::RoodPattern( int x, int y )
 {
+  setCurrIdx( 0 );
   setNumOfPoints( 4 );
   setCenter( x, y );
 }
@@ -127,6 +128,7 @@ void RoodPattern::producePoints()
 
 RasterPattern::RasterPattern( unsigned int str, int t, int r, int b, int l )
 {
+  setCurrIdx( 0 );
   this->stride = str;
   setWindow( t, r, b, l );
 }
@@ -213,6 +215,7 @@ void RasterPattern::producePoints()
 
 HexagonPattern::HexagonPattern( unsigned int str, int x, int y )
 {
+  setCurrIdx( 0 );
   setCenter( x, y );
   setStride( str );
   if ( str == 0 ) {
@@ -231,6 +234,7 @@ HexagonPattern::HexagonPattern( unsigned int str, int x, int y )
 
 HexagonPattern::HexagonPattern( int x, int y )
 {
+  setCurrIdx( 0 );
   setCenter( x, y );
   resize( 1 );
   setNumOfPoints( 1 );
