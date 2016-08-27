@@ -7,6 +7,7 @@
 
 #include "SearchPattern.h"
 #include <assert.h>
+#include <iostream>
 
 /* Class SearchPattern
  * Abstract class
@@ -19,10 +20,8 @@
 
 SearchPattern::SearchPattern()
 {
-  currentX = 0;
-  currentY = 0;
-  currIdx = 0;
-  numOfPoints = 0;
+  setCurrIdx( 0 );
+  setNumOfPoints( 0 );
   setWindow( 0, 0, 0, 0 );
 }
 
@@ -34,12 +33,12 @@ SearchPattern::~SearchPattern()     // std::vector-s get deleted when they get o
 
 int SearchPattern::getCurrentX() const
 {
-  return currentX;
+  return searchPointsX[currIdx];
 }
 
 int SearchPattern::getCurrentY() const
 {
-  return currentY;
+  return searchPointsY[currIdx];
 }
 
 void SearchPattern::setSearchPoint( unsigned int pos, int x, int y )
@@ -138,8 +137,6 @@ void SearchPattern::clear()
 
 RoodPattern::RoodPattern( int x, int y )
 {
-  setCurrIdx( 0 );
-  setNumOfPoints( 0 );
   setCenter( x, y );
 }
 
@@ -178,6 +175,7 @@ void RoodPattern::producePoints()
     pushSearchPoint( 1, 0 );
   if ( (getCenterY() + 1) <= getBottom() )
     pushSearchPoint( 0, 1 );
+  setCurrIdx( 0 );
 }
 
 /* Class RasterPattern
@@ -190,7 +188,6 @@ void RoodPattern::producePoints()
 
 RasterPattern::RasterPattern( unsigned int str, int t, int r, int b, int l )
 {
-  setCurrIdx( 0 );
   this->stride = str;
   setWindow( t, r, b, l );
 }
@@ -250,17 +247,14 @@ void RasterPattern::producePoints()
 
 HexagonPattern::HexagonPattern( unsigned int str, int x, int y )
 {
-  setCurrIdx( 0 );
   setCenter( x, y );
   setStride( str );
 }
 
 HexagonPattern::HexagonPattern( int x, int y )
 {
-  setCurrIdx( 0 );
   setCenter( x, y );
-  resize( 1 );
-  setNumOfPoints( 0 );
+  setStride( 2 );
 }
 
 HexagonPattern::~HexagonPattern()
@@ -302,6 +296,7 @@ void HexagonPattern::producePoints()
   // Str, in this context, means the log2
   // of the distance of a corner
   clear();
+  setNumOfPoints( 0 );
 
   unsigned int str = getStride();
   const int   topBound   = getTop();
@@ -319,30 +314,24 @@ void HexagonPattern::producePoints()
     // corner distance delegates to a horizontal hexagon
     if ( (getCenterY() - cornerDistance) >= topBound ) {
       if ( (getCenterX() - halfCornerDistance) >= leftBound ) {
-        incNumOfPoints();
-        pushSearchPoint( -halfCornerDistance, -cornerDistance );
+        pushSearchPoint( getCenterX() - halfCornerDistance, getCenterY() - cornerDistance );
       }
       if ( (getCenterX() + halfCornerDistance) <= rightBound ) {
-        incNumOfPoints();
-        pushSearchPoint( halfCornerDistance, -cornerDistance );
+        pushSearchPoint( getCenterX() + halfCornerDistance, getCenterY() - cornerDistance );
       }
     }
     if ( (getCenterX() - cornerDistance) >= leftBound ) {
-      incNumOfPoints();
-      pushSearchPoint( -cornerDistance, 0 );
+      pushSearchPoint( getCenterX() - cornerDistance, getCenterY() );
     }
     if ( (getCenterX() + cornerDistance) <= rightBound ) {
-      incNumOfPoints();
-      pushSearchPoint( cornerDistance, 0 );
+      pushSearchPoint( getCenterX() + cornerDistance, getCenterY() );
     }
     if ( (getCenterY() + cornerDistance) <= bottomBound ) {
       if ( (getCenterX() - halfCornerDistance) >= leftBound ) {
-        incNumOfPoints();
-        pushSearchPoint( -halfCornerDistance, cornerDistance );
+        pushSearchPoint( getCenterX() - halfCornerDistance, getCenterY() + cornerDistance );
       }
       if ( (getCenterX() + halfCornerDistance) <= rightBound ) {
-        incNumOfPoints();
-        pushSearchPoint( halfCornerDistance, cornerDistance );
+        pushSearchPoint( getCenterX() + halfCornerDistance, getCenterY() + cornerDistance );
       }
     }
   }
@@ -350,44 +339,36 @@ void HexagonPattern::producePoints()
     // In Type-1 hexagon search pattern, even log2 of
     // corner distance delegates to a vertical hexagon
     if ( (getCenterY() - cornerDistance) >= topBound ) {
-      incNumOfPoints();
-      pushSearchPoint( 0, -cornerDistance );
+      pushSearchPoint( getCenterX(), getCenterY() - cornerDistance );
       if ( (getCenterX() - cornerDistance) >= leftBound ) {
-        incNumOfPoints();
-        pushSearchPoint( -cornerDistance, -halfCornerDistance );
+        pushSearchPoint( getCenterX() - cornerDistance, getCenterY() - halfCornerDistance );
       }
       if ( (getCenterX() + cornerDistance) <= rightBound ) {
-        incNumOfPoints();
-        pushSearchPoint( cornerDistance, -halfCornerDistance );
+        pushSearchPoint( getCenterX() + cornerDistance, getCenterY() - halfCornerDistance );
       }
       else if ( (getCenterY() - halfCornerDistance) >= topBound ) {
         if ( (getCenterX() - cornerDistance) >= leftBound ) {
-          incNumOfPoints();
-          pushSearchPoint( -cornerDistance, -halfCornerDistance );
+          pushSearchPoint( getCenterX() - cornerDistance, getCenterY() - halfCornerDistance );
         }
         if ( (getCenterX() + cornerDistance) <= rightBound ) {
-          incNumOfPoints();
-          pushSearchPoint( cornerDistance, -halfCornerDistance );
+          pushSearchPoint( getCenterX() + cornerDistance, getCenterY() - halfCornerDistance );
         }
       }
     }
     if ( (getCenterY() + halfCornerDistance) <= bottomBound ) {
       if( (getCenterX() - cornerDistance) >= leftBound ) {
-        incNumOfPoints();
-        pushSearchPoint( -cornerDistance, halfCornerDistance );
+        pushSearchPoint( getCenterX() - cornerDistance, getCenterY() + halfCornerDistance );
       }
       if ( (getCenterX() + cornerDistance) <= rightBound ) {
-        incNumOfPoints();
-        pushSearchPoint( cornerDistance, halfCornerDistance );
+        pushSearchPoint( getCenterX() + cornerDistance, getCenterY() + halfCornerDistance );
       }
       if ( (getCenterY() + cornerDistance) <= bottomBound ) {
-        incNumOfPoints();
-        pushSearchPoint( 0, cornerDistance );
+        pushSearchPoint( getCenterX(), getCenterY() + cornerDistance );
       }
     }
   }
 
-
+  setCurrIdx( 0 );
 /*
   // 8 point search,                   //   1 2 3
   // search around the start point     //   4 0 5

@@ -39,8 +39,6 @@ private:
   std::vector<int> searchPointsY;
   unsigned int currIdx;
   unsigned int numOfPoints;
-  int currentX;
-  int currentY;
   int top, right, bottom, left;
 };
 

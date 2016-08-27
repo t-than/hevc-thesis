@@ -4384,12 +4384,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bTestOtherPredictedMV                   = bExtendedSettings;
   const Bool bTestZeroVectorStart                    = bExtendedSettings;
   const Bool bTestZeroVectorStop                     = false;
-  const Bool bFirstSearchDiamond                     = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
-  const Bool bFirstCornersForDiamondDist1            = bExtendedSettings;
-  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
-  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
-  const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
-  const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
   const Bool bRasterRefinementCornersForDiamondDist1 = bExtendedSettings;
   const Bool bStarRefinementEnable                   = true;  // enable either star refinement or raster refinement
   const Bool bStarRefinementDiamond                  = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
@@ -4397,6 +4391,8 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bStarRefinementStop                     = false;
   const UInt uiStarRefinementRounds                  = 2;  // star refinement stop X rounds after best match (must be >=1)
   const Bool bNewZeroNeighbourhoodTest               = bExtendedSettings;
+  const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
+  const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
 
   // Initialization of motion vectors, search helper struct
 
@@ -4451,7 +4447,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   SearchPattern* pattern = new RoodPattern( 0, 0 );
   pattern->setWindow( iSrchRngVerTop, iSrchRngHorRight, iSrchRngVerBottom, iSrchRngHorLeft );
   pattern->producePoints();
-
   int i; // Dummy index for loops
   for ( i = 0; i < pattern->getNumOfPoints(); i++ ) {
     xTZSearchHelp( pcPatternKey, cStruct, pattern->getCurrentX(), pattern->getCurrentY(), 0, 0 );
@@ -4468,7 +4463,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
     ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
     return;
   }
-
 
   if (pIntegerMv2Nx2NPred != 0)
   {
@@ -4502,6 +4496,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   // start search
   Int  iDist = 0;
+  Int  iStr = 0;
   Int  iStartX = cStruct.iBestX;
   Int  iStartY = cStruct.iBestY;
 
@@ -4509,28 +4504,20 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   // first search around best position up to now.
   // The following works as a "subsampled/log" window search around the best candidate
-  for ( iDist = 1; iDist <= (Int)uiSearchRange; iDist*=2 )
-  {
-    if ( bFirstSearchDiamond == 1 )
-    {
-      xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bFirstCornersForDiamondDist1 );
-    }
-    else
-    {
-      xTZ8PointSquareSearch  ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist );
-    }
 
-    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
-    {
-      break;
+  HexagonPattern * hexagonPattern = new HexagonPattern( iStartX, iStartY );
+  hexagonPattern->setWindow( iSrchRngVerTop, iSrchRngHorRight, iSrchRngVerBottom, iSrchRngHorLeft );
+
+  for ( iDist = 2, iStr = 2; iDist <= (Int)uiSearchRange; iDist*=2, iStr++ ) {
+    hexagonPattern->setStride( iStr );
+    hexagonPattern->producePoints();
+    for ( i = 0; i < hexagonPattern->getNumOfPoints(); i++) {
+      xTZSearchHelp(pcPatternKey, cStruct, hexagonPattern->getCurrentX(), hexagonPattern->getCurrentY(), 0, iDist);
+      hexagonPattern->next();
     }
   }
 
-/*  pattern = new HexagonPattern
-  for ( i = 0; i < uiSearchRange; i++ ) {
 
-  }
-  */
   if (!bNewZeroNeighbourhoodTest)
   {
     // test whether zero Mv is a better start point than Median predictor
