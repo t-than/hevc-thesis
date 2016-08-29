@@ -51,6 +51,7 @@ public:
   void producePoints();
   int getCenterX() const;
   int getCenterY() const;
+  void produceVer();
 
 private:
   int centerX, centerY;

@@ -4384,15 +4384,17 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bTestOtherPredictedMV                   = bExtendedSettings;
   const Bool bTestZeroVectorStart                    = bExtendedSettings;
   const Bool bTestZeroVectorStop                     = false;
+  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
   const Bool bRasterRefinementCornersForDiamondDist1 = bExtendedSettings;
   const Bool bStarRefinementEnable                   = true;  // enable either star refinement or raster refinement
   const Bool bStarRefinementDiamond                  = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
-  const Bool bStarRefinementCornersForDiamondDist1   = bExtendedSettings;
   const Bool bStarRefinementStop                     = false;
+  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
   const UInt uiStarRefinementRounds                  = 2;  // star refinement stop X rounds after best match (must be >=1)
   const Bool bNewZeroNeighbourhoodTest               = bExtendedSettings;
   const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
   const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
+  const Bool bStarRefinementCornersForDiamondDist1   = bExtendedSettings;
 
   // Initialization of motion vectors, search helper struct
 
@@ -4508,15 +4510,23 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   HexagonPattern * hexagonPattern = new HexagonPattern( iStartX, iStartY );
   hexagonPattern->setWindow( iSrchRngVerTop, iSrchRngHorRight, iSrchRngVerBottom, iSrchRngHorLeft );
 
+  cStruct.uiBestRound = 0;
   for ( iDist = 2, iStr = 2; iDist <= (Int)uiSearchRange; iDist*=2, iStr++ ) {
+    (cStruct.uiBestRound)++;
     hexagonPattern->setStride( iStr );
     hexagonPattern->producePoints();
     for ( i = 0; i < hexagonPattern->getNumOfPoints(); i++) {
       xTZSearchHelp(pcPatternKey, cStruct, hexagonPattern->getCurrentX(), hexagonPattern->getCurrentY(), 0, iDist);
       hexagonPattern->next();
     }
+
+    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
+    {
+      break;
+    }
   }
 
+  delete hexagonPattern;
 
   if (!bNewZeroNeighbourhoodTest)
   {
@@ -4561,7 +4571,40 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   if ( cStruct.uiBestDistance == 1 )
   {
     cStruct.uiBestDistance = 0;
-    xTZ2PointSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB );
+    //xTZ2PointSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB );
+
+    if ( cStruct.iBestX == 0 ) {
+      if ( cStruct.iBestY == -1 ) {
+        xTZSearchHelp( pcPatternKey, cStruct, -1, -1, 0, 0 );
+        xTZSearchHelp( pcPatternKey, cStruct, 1, -1, 0, 0 );
+        rcMv.set(cStruct.iBestX, cStruct.iBestY  );
+        ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
+        return;
+      }
+      else if ( cStruct.iBestY == 1 ) {
+        xTZSearchHelp( pcPatternKey, cStruct, -1, 1, 0, 0 );
+        xTZSearchHelp( pcPatternKey, cStruct, 1, 1, 0, 0 );
+        rcMv.set(cStruct.iBestX, cStruct.iBestY  );
+        ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
+        return;
+      }
+    }
+    else if ( cStruct.iBestY == 0 ) {
+      if ( cStruct.iBestX == -1 ) {
+        xTZSearchHelp( pcPatternKey, cStruct, -1, -1, 0, 0 );
+        xTZSearchHelp( pcPatternKey, cStruct, -1, 1, 0, 0 );
+        rcMv.set(cStruct.iBestX, cStruct.iBestY  );
+        ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
+        return;
+      }
+      else if ( cStruct.iBestX == 1 ) {
+        xTZSearchHelp( pcPatternKey, cStruct, 1, -1, 0, 0 );
+        xTZSearchHelp( pcPatternKey, cStruct, 1, 1, 0, 0 );
+        rcMv.set(cStruct.iBestX, cStruct.iBestY  );
+        ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
+        return;
+      }
+    }
   }
 
   // raster search if distance is too big
@@ -4614,40 +4657,40 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   // star refinement
   if ( bStarRefinementEnable && cStruct.uiBestDistance > 0 )
-  {
-    while ( cStruct.uiBestDistance > 0 )
-    {
-      iStartX = cStruct.iBestX;
-      iStartY = cStruct.iBestY;
-      cStruct.uiBestDistance = 0;
-      cStruct.ucPointNr = 0;
-      for ( iDist = 1; iDist < (Int)uiSearchRange + 1; iDist*=2 )
-      {
-        if ( bStarRefinementDiamond == 1 )
-        {
-          xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bStarRefinementCornersForDiamondDist1 );
-        }
-        else
-        {
-          xTZ8PointSquareSearch  ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist );
-        }
-        if ( bStarRefinementStop && (cStruct.uiBestRound >= uiStarRefinementRounds) ) // stop criterion
-        {
-          break;
-        }
-      }
+   {
+     while ( cStruct.uiBestDistance > 0 )
+     {
+       iStartX = cStruct.iBestX;
+       iStartY = cStruct.iBestY;
+       cStruct.uiBestDistance = 0;
+       cStruct.ucPointNr = 0;
+       for ( iDist = 1; iDist < (Int)uiSearchRange + 1; iDist*=2 )
+       {
+         if ( bStarRefinementDiamond == 1 )
+         {
+           xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bStarRefinementCornersForDiamondDist1 );
+         }
+         else
+         {
+           xTZ8PointSquareSearch  ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist );
+         }
+         if ( bStarRefinementStop && (cStruct.uiBestRound >= uiStarRefinementRounds) ) // stop criterion
+         {
+           break;
+         }
+       }
 
-      // calculate only 2 missing points instead 8 points if cStrukt.uiBestDistance == 1
-      if ( cStruct.uiBestDistance == 1 )
-      {
-        cStruct.uiBestDistance = 0;
-        if ( cStruct.ucPointNr != 0 )
-        {
-          xTZ2PointSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB );
-        }
-      }
-    }
-  }
+       // calculate only 2 missing points instead 8 points if cStrukt.uiBestDistance == 1
+       if ( cStruct.uiBestDistance == 1 )
+       {
+         cStruct.uiBestDistance = 0;
+         if ( cStruct.ucPointNr != 0 )
+         {
+           xTZ2PointSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB );
+         }
+       }
+     }
+   }
 
   // write out best match
   rcMv.set( cStruct.iBestX, cStruct.iBestY );
