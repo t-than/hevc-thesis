@@ -11,3 +11,4 @@ str.bin
 *.a
 *.o
 output/
+*.txt
