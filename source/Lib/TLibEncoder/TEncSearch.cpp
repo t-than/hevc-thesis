@@ -4396,6 +4396,8 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
   const Bool bStarRefinementCornersForDiamondDist1   = bExtendedSettings;
 
+  int i; // General for-index
+
   // Initialization of motion vectors, search helper struct
 
   UInt uiSearchRange = m_iSearchRange;
@@ -4446,14 +4448,15 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   Int   iSrchRngVerBottom = pcMvSrchRngRB->getVer();
 
   // Rood search
-  SearchPattern* pattern = new RoodPattern( 0, 0 );
-  pattern->setWindow( iSrchRngVerTop, iSrchRngHorRight, iSrchRngVerBottom, iSrchRngHorLeft );
-  pattern->producePoints();
-  int i; // Dummy index for loops
-  for ( i = 0; i < pattern->getNumOfPoints(); i++ ) {
-    xTZSearchHelp( pcPatternKey, cStruct, pattern->getCurrentX(), pattern->getCurrentY(), 0, 0 );
-    pattern->next();
-  }
+
+  if ( iSrchRngVerTop <= -1 )
+    xTZSearchHelp( pcPatternKey, cStruct, 0, -1, 2, 0 );
+  if ( iSrchRngHorLeft <= -1)
+    xTZSearchHelp( pcPatternKey, cStruct, -1, 0, 4, 0 );
+  if ( iSrchRngHorRight >= 1 )
+    xTZSearchHelp( pcPatternKey, cStruct, 1, 0, 5, 0 );
+  if ( iSrchRngVerBottom >= 1 )
+    xTZSearchHelp( pcPatternKey, cStruct, 0, 1, 7, 0 );
 
   // If not tested, test zero vector
   if ( (rcMv.getHor() != 0 || rcMv.getVer() != 0) && (0 != cStruct.iBestX || 0 != cStruct.iBestY) )
@@ -4755,7 +4758,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   rcMv.set( cStruct.iBestX, cStruct.iBestY );
   ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
 
-  delete pattern;
 }
 
 Void TEncSearch::xPatternSearchFracDIF(
