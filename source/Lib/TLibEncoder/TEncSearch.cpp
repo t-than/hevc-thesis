@@ -4593,28 +4593,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   }
 
   // END change
-  if (!bNewZeroNeighbourhoodTest)
-  {
-    // test whether zero Mv is a better start point than Median predictor
-    if ( bTestZeroVectorStart && ((cStruct.iBestX != 0) || (cStruct.iBestY != 0)) )
-    {
-      xTZSearchHelp( pcPatternKey, cStruct, 0, 0, 0, 0 );
-      if ( (cStruct.iBestX == 0) && (cStruct.iBestY == 0) )
-      {
-        // test its neighborhood
-        for ( iDist = 1; iDist <= (Int)uiSearchRange; iDist*=2 )
-        {
-          xTZ8PointDiamondSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, 0, 0, iDist, false );
-          if ( bTestZeroVectorStop && (cStruct.uiBestRound > 0) ) // stop criterion
-          {
-            break;
-          }
-        }
-      }
-    }
-  }
-  else
-  {
+  if (bNewZeroNeighbourhoodTest) {
     // Test also zero neighbourhood but with half the range
     // It was reported that the original (above) search scheme using bTestZeroVectorStart did not
     // make sense since one would have already checked the zero candidate earlier
