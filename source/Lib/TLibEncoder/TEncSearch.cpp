@@ -43,6 +43,8 @@
 #include "TLibCommon/TComTU.h"
 #include "TLibCommon/Debug.h"
 #include <iostream>
+#include <fstream>
+#include <cstdio>
 #include <math.h>
 #include <limits>
 
@@ -3876,11 +3878,9 @@ Void TEncSearch::xPatternSearchFast( const TComDataCU* const  pcCU,
     case MESEARCH_SELECTIVE:
       xTZSearchSelective( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred );
       break;
-
     case MESEARCH_DIAMOND_ENHANCED:
       xTZSearch( pcCU, pcPatternKey, piRefY, iRefStride, pcMvSrchRngLT, pcMvSrchRngRB, rcMv, ruiSAD, pIntegerMv2Nx2NPred, true );
       break;
-
     case MESEARCH_FULL: // shouldn't get here.
     default:
       break;
@@ -3920,6 +3920,7 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
   const Bool bStarRefinementStop                     = false;
   const UInt uiStarRefinementRounds                  = 2;  // star refinement stop X rounds after best match (must be >=1)
   const Bool bNewZeroNeighbourhoodTest               = bExtendedSettings;
+
 
   UInt uiSearchRange = m_iSearchRange;
   pcCU->clipMv( rcMv );
@@ -4004,6 +4005,8 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
   }
 
   // start search
+
+
   Int  iDist = 0;
   Int  iStartX = cStruct.iBestX;
   Int  iStartY = cStruct.iBestY;
@@ -4028,6 +4031,7 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
       break;
     }
   }
+
 
   if (!bNewZeroNeighbourhoodTest)
   {
@@ -4189,6 +4193,7 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
   // write out best match
   rcMv.set( cStruct.iBestX, cStruct.iBestY );
   ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
+
 }
 
 
@@ -4398,8 +4403,8 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   int i; // General for-index
 
-  // Initialization of motion vectors, search helper struct
 
+  // Initialization of motion vectors, search helper struct
   UInt uiSearchRange = m_iSearchRange;
   pcCU->clipMv( rcMv );
 #if ME_ENABLE_ROUNDING_OF_MVS
@@ -4462,6 +4467,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   if ( (rcMv.getHor() != 0 || rcMv.getVer() != 0) && (0 != cStruct.iBestX || 0 != cStruct.iBestY) )
     xTZSearchHelp( pcPatternKey, cStruct, 0, 0, 0, 0 );
 
+
   // Early terminate if zero vector is the best candidate
   if ( cStruct.iBestX == 0 && cStruct.iBestY == 0 ) {
     rcMv.set( 0, 0 );
@@ -4508,8 +4514,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bBestCandidateZero = (cStruct.iBestX == 0) && (cStruct.iBestY == 0);
 
   // BEGIN change
-  
-  
   // first search around best position up to now.
   // The following works as a "subsampled/log" window search around the best candidate
 
@@ -4559,13 +4563,13 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
           if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
             xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
           }
-          else if ( (iStartY - halfCornerDistance) >= iSrchRngVerTop ) {
-            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-            }
-            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-            }
+        }
+        else if ( (iStartY - halfCornerDistance) >= iSrchRngVerTop ) {
+          if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+            xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+          }
+          if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+            xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
           }
         }
         if ( (iStartY + halfCornerDistance) <= iSrchRngVerBottom ) {
@@ -4587,7 +4591,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
       break;
     }
   }
-
 
   // END change
   if (!bNewZeroNeighbourhoodTest)
@@ -4758,6 +4761,7 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   rcMv.set( cStruct.iBestX, cStruct.iBestY );
   ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
 
+  return;
 }
 
 Void TEncSearch::xPatternSearchFracDIF(
