@@ -4006,6 +4006,7 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
 
   // start search
 
+  clock_t tz = clock();
 
   Int  iDist = 0;
   Int  iStartX = cStruct.iBestX;
@@ -4032,6 +4033,10 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
     }
   }
 
+  ofstream tz_file;
+  tz_file.open("tz.txt", ios::app );
+  tz_file << (double) ( clock() - tz ) << std::endl;
+  tz_file.close();
 
   if (!bNewZeroNeighbourhoodTest)
   {
@@ -4513,74 +4518,97 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   const Bool bBestCandidateZero = (cStruct.iBestX == 0) && (cStruct.iBestY == 0);
 
+  clock_t hex = clock();
+
   // BEGIN change
   // first search around best position up to now.
   // The following works as a "subsampled/log" window search around the best candidate
 
-  cStruct.uiBestRound = 0;
   for ( iDist = 2, iStr = 2; iDist <= (Int)uiSearchRange; iDist*=2, iStr++ ) {
     (cStruct.uiBestRound)++;
 
     unsigned int cornerDistance = 1 << (iStr - 1);
     unsigned int halfCornerDistance = cornerDistance >> 1;
 
-    for ( i = 0; i < 6; i++) {
-
+    if ( (iStartY - cornerDistance) >= iSrchRngVerTop
+        && (iStartY + cornerDistance) <= iSrchRngVerBottom
+        && (iStartX - cornerDistance) >= iSrchRngHorLeft
+        && (iStartX + cornerDistance) <= iSrchRngHorRight ) {
       if ( (iStr & 1) == 1 ) {
-        // In Type-1 hexagon search pattern, odd log2 of
-        // corner distance delegates to a horizontal hexagon
-        if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
-          if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
-          }
-          if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
-          }
-        }
-        if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-          xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY,  0, iDist);
-        }
-        if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-          xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY,  0, iDist);
-        }
-        if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
-          if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY + cornerDistance,  0, iDist);
-          }
-          if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
-          }
-        }
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
       }
       else {
-        // In Type-1 hexagon search pattern, even log2 of
-        // corner distance delegates to a vertical hexagon
-        if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
-          xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY + cornerDistance,  0, iDist);
+      }
+    }
+    else {
+      for ( i = 0; i < 6; i++) {
+
+        if ( (iStr & 1) == 1 ) {
+          // In Type-1 hexagon search pattern, odd log2 of
+          // corner distance delegates to a horizontal hexagon
+          if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
+            if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+            }
+            if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+            }
+          }
           if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY,  0, iDist);
           }
           if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-          }
-        }
-        else if ( (iStartY - halfCornerDistance) >= iSrchRngVerTop ) {
-          if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-          }
-          if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-          }
-        }
-        if ( (iStartY + halfCornerDistance) <= iSrchRngVerBottom ) {
-          if( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
-          }
-          if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+            xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY,  0, iDist);
           }
           if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY + cornerDistance,  0, iDist);
+            if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY + cornerDistance,  0, iDist);
+            }
+            if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
+            }
+          }
+        }
+        else {
+          // In Type-1 hexagon search pattern, even log2 of
+          // corner distance delegates to a vertical hexagon
+          if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
+            xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY - cornerDistance,  0, iDist);
+            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+          }
+          else if ( (iStartY - halfCornerDistance) >= iSrchRngVerTop ) {
+            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+          }
+          if ( (iStartY + halfCornerDistance) <= iSrchRngVerBottom ) {
+            if( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
+              xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY + cornerDistance,  0, iDist);
+            }
           }
         }
       }
@@ -4591,6 +4619,11 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
       break;
     }
   }
+
+  ofstream hex_file;
+  hex_file.open("hex.txt", ios::app );
+  hex_file << (double) ( clock() - hex ) << std::endl;
+  hex_file.close();
 
   // END change
   if (bNewZeroNeighbourhoodTest) {
