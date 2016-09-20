@@ -611,7 +611,124 @@ __inline Void TEncSearch::xTZ8PointSquareSearch( const TComPattern* const pcPatt
   } // check bottom
 }
 
+__inline Void TEncSearch::xTZ6PointHexSearch( const TComPattern*const  pcPatternKey,
+                                                  IntTZSearchStruct& rcStruct,
+                                                  const TComMv*const  pcMvSrchRngLT,
+                                                  const TComMv*const  pcMvSrchRngRB,
+                                                  const Int iStartX,
+                                                  const Int iStartY,
+                                                  const Int iDist,
+                                                  const Int iStr )
+{
+  const Int   iSrchRngHorLeft   = pcMvSrchRngLT->getHor();
+  const Int   iSrchRngHorRight  = pcMvSrchRngRB->getHor();
+  const Int   iSrchRngVerTop    = pcMvSrchRngLT->getVer();
+  const Int   iSrchRngVerBottom = pcMvSrchRngRB->getVer();
 
+  assert ( iDist != 0 );
+
+  (rcStruct.uiBestRound)++;
+
+  if ( iDist == 1 ) {
+    if ( ( iStartY - 1 ) >= iSrchRngVerTop ) // check top
+      xTZSearchHelp( pcPatternKey, rcStruct, iStartX, iStartY - 1, 2, iDist );
+    if ( ( iStartX - 1 ) >= iSrchRngHorLeft ) // check middle left
+      xTZSearchHelp( pcPatternKey, rcStruct, iStartX - 1, iStartY, 4, iDist );
+    if ( ( iStartX + 1 ) <= iSrchRngHorRight ) // check middle right
+      xTZSearchHelp( pcPatternKey, rcStruct, iStartX + 1, iStartY, 5, iDist );
+    if ( ( iStartY + 1 ) <= iSrchRngVerBottom ) // check bottom
+      xTZSearchHelp( pcPatternKey, rcStruct, iStartX, iStartY + 1, 7, iDist );
+  }
+  else {
+    unsigned int cornerDistance = 1 << (iStr - 1);
+    unsigned int halfCornerDistance = cornerDistance >> 1;
+
+    if ( (iStartY - cornerDistance) >= iSrchRngVerTop
+        && (iStartY + cornerDistance) <= iSrchRngVerBottom
+        && (iStartX - cornerDistance) >= iSrchRngHorLeft
+        && (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+      if ( (iStr & 1) == 1 ) {
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
+      }
+      else {
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX, iStartY - cornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX, iStartY + cornerDistance,  0, iDist);
+      }
+    }
+    else {
+      int i;
+      for ( i = 0; i < 6; i++) {
+
+        if ( (iStr & 1) == 1 ) {
+          // In Type-1 hexagon search pattern, odd log2 of
+          // corner distance delegates to a horizontal hexagon
+          if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
+            if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+            }
+            if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
+            }
+          }
+          if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+            xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY,  0, iDist);
+          }
+          if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+            xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY,  0, iDist);
+          }
+          if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
+            if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX - halfCornerDistance, iStartY + cornerDistance,  0, iDist);
+            }
+            if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
+            }
+          }
+        }
+        else {
+          // In Type-1 hexagon search pattern, even log2 of
+          // corner distance delegates to a vertical hexagon
+          if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
+            xTZSearchHelp(pcPatternKey, rcStruct, iStartX, iStartY - cornerDistance,  0, iDist);
+            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+          }
+          else if ( (iStartY - halfCornerDistance) >= iSrchRngVerTop ) {
+            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
+            }
+          }
+          if ( (iStartY + halfCornerDistance) <= iSrchRngVerBottom ) {
+            if( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
+            }
+            if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
+              xTZSearchHelp(pcPatternKey, rcStruct, iStartX, iStartY + cornerDistance,  0, iDist);
+            }
+          }
+        }
+      }
+    }
+  }
+}
 
 
 __inline Void TEncSearch::xTZ8PointDiamondSearch( const TComPattern*const  pcPatternKey,
@@ -4005,8 +4122,7 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
   }
 
   // start search
-
-  clock_t tz = clock();
+//  clock_t tz = clock();
 
   Int  iDist = 0;
   Int  iStartX = cStruct.iBestX;
@@ -4033,10 +4149,10 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
     }
   }
 
-  ofstream tz_file;
-  tz_file.open("tz.txt", ios::app );
-  tz_file << (double) ( clock() - tz ) << std::endl;
-  tz_file.close();
+//  ofstream tz_f;
+//  tz_f.open("tz.txt", ios::app );
+//  tz_f << (double) ( clock() - tz ) << std::endl;
+//  tz_f.close();
 
   if (!bNewZeroNeighbourhoodTest)
   {
@@ -4406,8 +4522,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
   const Bool bStarRefinementCornersForDiamondDist1   = bExtendedSettings;
 
-  int i; // General for-index
-
 
   // Initialization of motion vectors, search helper struct
   UInt uiSearchRange = m_iSearchRange;
@@ -4511,108 +4625,24 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   }
 
   // start search
-  Int  iDist = 0;
-  Int  iStr = 0;
+  Int  iDist;
+  Int  iStr;
   Int  iStartX = cStruct.iBestX;
   Int  iStartY = cStruct.iBestY;
 
   const Bool bBestCandidateZero = (cStruct.iBestX == 0) && (cStruct.iBestY == 0);
 
-  clock_t hex = clock();
+
+//  clock_t hex = clock();
 
   // BEGIN change
   // first search around best position up to now.
   // The following works as a "subsampled/log" window search around the best candidate
 
-  for ( iDist = 2, iStr = 2; iDist <= (Int)uiSearchRange; iDist*=2, iStr++ ) {
-    (cStruct.uiBestRound)++;
 
-    unsigned int cornerDistance = 1 << (iStr - 1);
-    unsigned int halfCornerDistance = cornerDistance >> 1;
-
-    if ( (iStartY - cornerDistance) >= iSrchRngVerTop
-        && (iStartY + cornerDistance) <= iSrchRngVerBottom
-        && (iStartX - cornerDistance) >= iSrchRngHorLeft
-        && (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-      if ( (iStr & 1) == 1 ) {
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
-      }
-      else {
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY - cornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
-        xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY + cornerDistance,  0, iDist);
-      }
-    }
-    else {
-      for ( i = 0; i < 6; i++) {
-
-        if ( (iStr & 1) == 1 ) {
-          // In Type-1 hexagon search pattern, odd log2 of
-          // corner distance delegates to a horizontal hexagon
-          if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
-            if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY - cornerDistance,  0, iDist);
-            }
-            if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
-            }
-          }
-          if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY,  0, iDist);
-          }
-          if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY,  0, iDist);
-          }
-          if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
-            if ( (iStartX - halfCornerDistance) >= iSrchRngHorLeft ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX - halfCornerDistance, iStartY + cornerDistance,  0, iDist);
-            }
-            if ( (iStartX + halfCornerDistance) <= iSrchRngHorRight ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
-            }
-          }
-        }
-        else {
-          // In Type-1 hexagon search pattern, even log2 of
-          // corner distance delegates to a vertical hexagon
-          if ( (iStartY - cornerDistance) >= iSrchRngVerTop ) {
-            xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY - cornerDistance,  0, iDist);
-            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-            }
-            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-            }
-          }
-          else if ( (iStartY - halfCornerDistance) >= iSrchRngVerTop ) {
-            if ( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-            }
-            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY - halfCornerDistance,  0, iDist);
-            }
-          }
-          if ( (iStartY + halfCornerDistance) <= iSrchRngVerBottom ) {
-            if( (iStartX - cornerDistance) >= iSrchRngHorLeft ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX - cornerDistance, iStartY + halfCornerDistance,  0, iDist);
-            }
-            if ( (iStartX + cornerDistance) <= iSrchRngHorRight ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX + cornerDistance, iStartY + halfCornerDistance,  0, iDist);
-            }
-            if ( (iStartY + cornerDistance) <= iSrchRngVerBottom ) {
-              xTZSearchHelp(pcPatternKey, cStruct, iStartX, iStartY + cornerDistance,  0, iDist);
-            }
-          }
-        }
-      }
-    }
+  for ( iDist = 1, iStr = 1; iDist <= (Int)uiSearchRange; iDist*=2, iStr++)
+  {
+    xTZ6PointHexSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, iStr );
 
     if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
     {
@@ -4620,10 +4650,6 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
     }
   }
 
-  ofstream hex_file;
-  hex_file.open("hex.txt", ios::app );
-  hex_file << (double) ( clock() - hex ) << std::endl;
-  hex_file.close();
 
   // END change
   if (bNewZeroNeighbourhoodTest) {
