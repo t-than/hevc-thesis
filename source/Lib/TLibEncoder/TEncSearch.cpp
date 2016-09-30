@@ -652,6 +652,7 @@ __inline Void TEncSearch::xTZ6PointHexSearch( const TComPattern*const  pcPattern
         xTZSearchHelp(pcPatternKey, rcStruct, iStartX + halfCornerDistance, iStartY - cornerDistance,  0, iDist);
         xTZSearchHelp(pcPatternKey, rcStruct, iStartX - cornerDistance, iStartY,  0, iDist);
         xTZSearchHelp(pcPatternKey, rcStruct, iStartX + cornerDistance, iStartY,  0, iDist);
+        xTZSearchHelp(pcPatternKey, rcStruct, iStartX - halfCornerDistance, iStartY + cornerDistance,  0, iDist);
         xTZSearchHelp(pcPatternKey, rcStruct, iStartX + halfCornerDistance, iStartY + cornerDistance,  0, iDist);
       }
       else {
@@ -4024,8 +4025,8 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
   const Bool bTestZeroVectorStop                     = false;
   const Bool bFirstSearchDiamond                     = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
   const Bool bFirstCornersForDiamondDist1            = bExtendedSettings;
-  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
-  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
+//  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
+//  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
   const Bool bEnableRasterSearch                     = true;
   const Bool bAlwaysRasterSearch                     = bExtendedSettings;  // true: BETTER but factor 2 slower
   const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
@@ -4143,10 +4144,14 @@ Void TEncSearch::xTZSearch( const TComDataCU* const pcCU,
       xTZ8PointSquareSearch  ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist );
     }
 
-    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
-    {
-      break;
-    }
+//    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
+//    {
+//      ofstream tz_break;
+//      tz_break.open( "tz_break.txt", ios::app );
+//      tz_break << iDist << std::endl;
+//      tz_break.close();
+//      break;
+//    }
   }
 
 //  ofstream tz_f;
@@ -4510,17 +4515,16 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   const Bool bTestOtherPredictedMV                   = bExtendedSettings;
   const Bool bTestZeroVectorStart                    = bExtendedSettings;
   const Bool bTestZeroVectorStop                     = false;
-  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
+//  const Bool bFirstSearchStop                        = m_pcEncCfg->getFastMEAssumingSmootherMVEnabled();
   const Bool bRasterRefinementCornersForDiamondDist1 = bExtendedSettings;
   const Bool bStarRefinementEnable                   = true;  // enable either star refinement or raster refinement
   const Bool bStarRefinementDiamond                  = true;  // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
   const Bool bStarRefinementStop                     = false;
-  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
+//  const UInt uiFirstSearchRounds                     = 3;     // first search stop X rounds after best match (must be >=1)
   const UInt uiStarRefinementRounds                  = 2;  // star refinement stop X rounds after best match (must be >=1)
   const Bool bNewZeroNeighbourhoodTest               = bExtendedSettings;
   const Bool bRasterRefinementEnable                 = false; // enable either raster refinement or star refinement
   const Bool bRasterRefinementDiamond                = false; // 1 = xTZ8PointDiamondSearch   0 = xTZ8PointSquareSearch
-  const Bool bStarRefinementCornersForDiamondDist1   = bExtendedSettings;
 
 
   // Initialization of motion vectors, search helper struct
@@ -4589,6 +4593,12 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
 
   // Early terminate if zero vector is the best candidate
   if ( cStruct.iBestX == 0 && cStruct.iBestY == 0 ) {
+
+//    ofstream early;
+//    early.open("early.txt", ios:: app );
+//    early << "Early" << std::endl;
+//    early.close();
+
     rcMv.set( 0, 0 );
     ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY );
     return;
@@ -4644,12 +4654,20 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
   {
     xTZ6PointHexSearch( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, iStr );
 
-    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
-    {
-      break;
-    }
+//    if ( bFirstSearchStop && ( cStruct.uiBestRound >= uiFirstSearchRounds ) ) // stop criterion
+//    {
+//      ofstream hex_break;
+//      hex_break.open( "hex_break.txt", ios::app );
+//      hex_break << iDist << std::endl;
+//      hex_break.close();
+//      break;
+//    }
   }
 
+//  ofstream hex_txt;
+//  hex_txt.open( "hex.txt", ios::app );
+//  hex_txt << (double) (clock() - hex) << std::endl;
+//  hex_txt.close();
 
   // END change
   if (bNewZeroNeighbourhoodTest) {
@@ -4767,11 +4785,11 @@ Void TEncSearch::xTZSearchHexagonEarly( const TComDataCU* const   pcCU,
        iStartY = cStruct.iBestY;
        cStruct.uiBestDistance = 0;
        cStruct.ucPointNr = 0;
-       for ( iDist = 1; iDist < (Int)uiSearchRange + 1; iDist*=2 )
+       for ( iDist = 1, iStr = 1; iDist < (Int)uiSearchRange + 1; iDist*=2, iStr++ )
        {
          if ( bStarRefinementDiamond == 1 )
          {
-           xTZ8PointDiamondSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, bStarRefinementCornersForDiamondDist1 );
+           xTZ6PointHexSearch ( pcPatternKey, cStruct, pcMvSrchRngLT, pcMvSrchRngRB, iStartX, iStartY, iDist, iStr );
          }
          else
          {
